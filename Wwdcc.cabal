@@ -1,0 +1,30 @@
+Name:                Wwdcc
+Version:             2013.1
+Synopsis:            Check for a WWDC 2013 announcement.
+Homepage:            https://github.com/quixoftic/Wwdcc
+License:             BSD3
+License-file:        LICENSE
+Author:              Drew Hess <dhess-src@quixoftic.com>
+Maintainer:          Drew Hess <dhess-src@quixoftic.com>
+Copyright:           Copyright © 2013, Quixoftic, LLC <src@quixoftic.com>
+Category:            Web
+Build-type:          Simple
+Cabal-version:       >=1.6
+
+source-repository head
+  type:     git
+  location: https://github.com/quixoftic/Wwdcc.git
+
+Executable wwdcc
+           Hs-Source-Dirs:      src
+           Main-Is:             Main.hs
+           Build-Depends:       base >= 4.5.0.0 && < 5,
+                                mtl,
+                                text,
+                                bytestring,
+                                hsyslog,
+                                http-conduit,
+                                tagsoup,
+                                optparse-applicative,
+                                mime-mail
+
