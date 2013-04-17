@@ -21,7 +21,7 @@ import Logging
 import qualified Config as C
 
 wwdcUrl = "https://developer.apple.com/wwdc/"
-description = "Send email to SRC_EMAIL from DEST_EMAIL when WWDC site changes or stops responding."
+description = "Send email to DST_EMAIL from SRC_EMAIL when WWDC site changes or stops responding."
 
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
