@@ -57,14 +57,15 @@ action _ Modified config =
     logWarning msg
     sendMail msg config
 
-action Modified NotResponding config = logInfo $ (url config) ++ " is not responding."
-
-action _ NotResponding config =
+-- Only email when the site is not responding for at least 2 cycles.
+action NotResponding NotResponding config =
   let msg = (url config) ++ " is not responding."
   in do
     logWarning msg
     sendMail msg config
   
+action _ NotResponding config = logInfo $ (url config) ++ " is not responding (once)."
+
 sendMail :: String -> Config -> IO ()
 sendMail msg config =
   let msgText = T.pack msg
