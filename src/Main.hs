@@ -22,6 +22,9 @@ import qualified Config as C
 
 wwdcUrl = "https://developer.apple.com/wwdc/"
 description = "Send email to DST_EMAIL from SRC_EMAIL when WWDC site changes or stops responding."
+defaultUnmodifiedDelay = 30
+defaultModifiedDelay = 60
+defaultNotRespondingDelay = 30
 
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
@@ -47,19 +50,19 @@ parser = Options
                         <> short 'u'
                         <> metavar "URL"
                         <> value wwdcUrl
-                        <> help "Override WWDC URL")
+                        <> (help $! "Override WWDC URL (default is " ++ wwdcUrl ++ ")"))
          <*> option (long "unmodified-delay"
                      <> metavar "DELAY"
-                     <> value 30
-                     <> help "Delay (in seconds) between actions when site is unmodified")
+                     <> value defaultUnmodifiedDelay
+                     <> (help $! "Delay in seconds between actions when site is unmodified (default is " ++ (show defaultUnmodifiedDelay) ++ ")"))
          <*> option (long "modified-delay"
                      <> metavar "DELAY"
-                     <> value 60
-                     <> help "Delay (in seconds) beteen actions when site has been modified")
+                     <> value defaultModifiedDelay
+                     <> (help $! "Delay in seconds beteen actions when site has been modified (default is " ++ (show defaultModifiedDelay) ++ ")"))
          <*> option (long "not-responding-delay"
                      <> metavar "DELAY"
-                     <> value 60
-                     <> help "Delay (in seconds) between actions when site is note responding")
+                     <> value defaultNotRespondingDelay
+                     <> (help $! "Delay in seconds between actions when site doesn't respond for two cycles (default is " ++ (show defaultNotRespondingDelay) ++ ")"))
          <*> argument str ( metavar "SRC_EMAIL" )
          <*> argument str ( metavar "DEST_EMAIL" )
 
