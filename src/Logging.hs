@@ -32,7 +32,7 @@ verboseLogging = updateGlobalLogger defaultName (setLevel INFO)
 
 logToSyslog :: String -> IO ()
 logToSyslog progName = do
-  syslog <- openlog progName [PID] DAEMON DEBUG 
+  syslog <- openlog progName [PID] USER DEBUG 
   updateGlobalLogger rootLoggerName $ setHandlers [syslog]
   
 -- Convenience wrappers around hslogger functions of same name.
