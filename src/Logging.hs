@@ -9,49 +9,55 @@
 --
 
 
-module Logging ( configureLogger
+module Logging ( verboseLogging
+               , logToSyslog
                , defaultName
-               , debugM
-               , infoM
-               , noticeM
-               , warningM
-               , errorM
-               , criticalM
-               , alertM
-               , emergencyM 
+               , logDebug
+               , logInfo
+               , logNotice
+               , logWarning
+               , logError
+               , logCritical
+               , logAlert
+               , logEmergency 
                ) where
                  
-import qualified System.Log.Logger as Logger
-  
+import System.Log.Logger
+import System.Log.Handler.Syslog
+
 defaultName = "wwdcc"
 
-configureLogger :: Bool -> IO ()
-configureLogger True = Logger.updateGlobalLogger defaultName (Logger.setLevel Logger.INFO)
-configureLogger False = return ()  
+verboseLogging :: IO ()
+verboseLogging = updateGlobalLogger defaultName (setLevel INFO)
 
+logToSyslog :: String -> IO ()
+logToSyslog progName = do
+  syslog <- openlog progName [PID] DAEMON DEBUG 
+  updateGlobalLogger rootLoggerName $ setHandlers [syslog]
+  
 -- Convenience wrappers around hslogger functions of same name.
 --
 
-debugM :: String -> IO ()
-debugM = Logger.debugM defaultName
+logDebug :: String -> IO ()
+logDebug = debugM defaultName
 
-infoM :: String -> IO ()
-infoM = Logger.infoM defaultName
+logInfo :: String -> IO ()
+logInfo = infoM defaultName
 
-noticeM :: String -> IO ()
-noticeM = Logger.noticeM defaultName
+logNotice :: String -> IO ()
+logNotice = noticeM defaultName
 
-warningM :: String -> IO ()
-warningM = Logger.warningM defaultName
+logWarning :: String -> IO ()
+logWarning = warningM defaultName
 
-errorM :: String -> IO ()
-errorM = Logger.errorM defaultName
+logError :: String -> IO ()
+logError = errorM defaultName
 
-criticalM :: String -> IO ()
-criticalM = Logger.criticalM defaultName
+logCritical :: String -> IO ()
+logCritical = criticalM defaultName
 
-alertM :: String -> IO ()
-alertM = Logger.alertM defaultName
+logAlert :: String -> IO ()
+logAlert = alertM defaultName
 
-emergencyM :: String -> IO ()
-emergencyM = Logger.emergencyM defaultName
+logEmergency :: String -> IO ()
+logEmergency = emergencyM defaultName

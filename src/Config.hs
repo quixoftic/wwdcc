@@ -10,7 +10,8 @@
 
 module Config (Config(..)) where
 
-data Config = Config { url :: !String
+data Config = Config { daemon :: !Bool
+                     , url :: !String
                      , unmodifiedDelay :: !Int
                      , modifiedDelay :: !Int
                      , notRespondingDelay :: !Int

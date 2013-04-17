@@ -46,30 +46,30 @@ action :: SiteStatus -> SiteStatus -> Config -> IO ()
 action NotResponding Unmodified config =
   let msg = (url config) ++ " is back up, but unchanged."
   in do
-    warningM msg
+    logWarning msg
     sendMail msg config
 
-action _ Unmodified config = infoM $ (url config) ++ " unchanged."
+action _ Unmodified config = logInfo $ (url config) ++ " unchanged."
 
 action _ Modified config =
   let msg = (url config) ++ " has changed."
   in do
-    warningM msg
+    logWarning msg
     sendMail msg config
 
-action Modified NotResponding config = infoM $ (url config) ++ " is not responding."
+action Modified NotResponding config = logInfo $ (url config) ++ " is not responding."
 
 action _ NotResponding config =
   let msg = (url config) ++ " is not responding."
   in do
-    warningM msg
+    logWarning msg
     sendMail msg config
   
 sendMail :: String -> Config -> IO ()
 sendMail msg config =
   let msgText = T.pack msg
   in do
-    noticeM $ "Sending email to " ++ (dstEmail config)
+    logNotice $ "Sending email to " ++ (dstEmail config)
     mail <- simpleMail (toAddr $ dstEmail config)
                        (toAddr $ srcEmail config)
                        msgText

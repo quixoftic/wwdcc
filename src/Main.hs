@@ -12,6 +12,9 @@ module Main where
 
 import Control.Applicative
 import Data.Maybe
+import Control.Monad (when)
+import System.Environment (getProgName)
+import System.Posix.Daemonize
 import Options.Applicative
 import Wwdcc
 import Logging
@@ -21,6 +24,8 @@ wwdcUrl = "https://developer.apple.com/wwdc/"
 description = "Send email to SRC_EMAIL from DEST_EMAIL when WWDC site changes or stops responding."
 
 data Options = Options { verbose :: !Bool
+                       , syslog :: !Bool
+                       , daemon :: !Bool
                        , url :: !String
                        , unmodifiedDelay :: !Int
                        , modifiedDelay :: !Int
@@ -33,6 +38,11 @@ parser = Options
          <$> switch (long "verbose"
                      <> short 'v'
                      <> help "Verbose logging")
+         <*> switch (long "syslog"
+                     <> short 's'
+                     <> help "Log to syslog (default is stderr)")
+         <*> switch (long "daemon"
+                     <> help "Run as a daemon (implies --syslog)")
          <*> strOption (long "url"
                         <> short 'u'
                         <> metavar "URL"
@@ -56,8 +66,11 @@ parser = Options
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
-  configureLogger (verbose cmdLineOptions)
-  startChecks $ buildConfig cmdLineOptions
+  when (verbose cmdLineOptions) verboseLogging
+  when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
+  if (daemon cmdLineOptions)
+    then daemonize $ startChecks $ buildConfig cmdLineOptions
+    else startChecks $ buildConfig cmdLineOptions
   where
     opts = info (helper <*> parser)
       ( fullDesc
@@ -65,7 +78,8 @@ main = do
      <> header "wwdcc - a WWDC checker" )
 
 buildConfig :: Options -> C.Config
-buildConfig options = C.Config { C.url = url options
+buildConfig options = C.Config { C.daemon = daemon options
+                               , C.url = url options
                                , C.unmodifiedDelay = unmodifiedDelay options
                                , C.modifiedDelay = modifiedDelay options
                                , C.notRespondingDelay = notRespondingDelay options

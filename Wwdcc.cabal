@@ -23,6 +23,7 @@ Executable wwdcc
                                 text,
                                 bytestring,
                                 hslogger,
+                                hdaemonize,
                                 http-conduit,
                                 tagsoup,
                                 optparse-applicative,
