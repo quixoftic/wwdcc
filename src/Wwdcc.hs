@@ -77,7 +77,7 @@ sendMail msg config =
                        (TL.fromChunks [msgText]) -- why is this argument of type Text.Lazy???
                        ""
                        []
-    renderSendMail mail
+    unless (testMode config) $ renderSendMail mail
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }

@@ -29,6 +29,7 @@ defaultNotRespondingDelay = 30
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
                        , daemon :: !Bool
+                       , testMode :: !Bool
                        , url :: !String
                        , unmodifiedDelay :: !Int
                        , modifiedDelay :: !Int
@@ -46,6 +47,8 @@ parser = Options
                      <> help "Log to syslog (default is stderr)")
          <*> switch (long "daemon"
                      <> help "Run as a daemon (implies --syslog)")
+         <*> switch (long "test"
+                     <> help "Run in test mode, no email will be sent")
          <*> strOption (long "url"
                         <> short 'u'
                         <> metavar "URL"
@@ -71,6 +74,7 @@ main = do
   cmdLineOptions <- execParser opts
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
+  when (testMode cmdLineOptions) $ logWarning "WARNING: Running in test mode -- no email will be sent!"
   if (daemon cmdLineOptions)
     then daemonize $ startChecks $ buildConfig cmdLineOptions
     else startChecks $ buildConfig cmdLineOptions
@@ -82,6 +86,7 @@ main = do
 
 buildConfig :: Options -> C.Config
 buildConfig options = C.Config { C.daemon = daemon options
+                               , C.testMode = testMode options
                                , C.url = url options
                                , C.unmodifiedDelay = unmodifiedDelay options
                                , C.modifiedDelay = modifiedDelay options
