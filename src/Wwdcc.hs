@@ -13,8 +13,8 @@
 module Wwdcc (startChecks) where
 
 import qualified Data.ByteString.Lazy as BS
-import System.Posix.Syslog (syslog, Priority(Notice))
 import Control.Concurrent (threadDelay)
+import qualified System.Log.Logger as Logger
 import Network.HTTP.Conduit hiding (def)
 import Text.HTML.TagSoup
 import Data.Maybe
@@ -29,7 +29,10 @@ import Config (Config(..))
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
 
 startChecks :: Config -> IO ()
-startChecks = getStatus Unmodified
+startChecks config = do
+  -- XXX dhess - temporary hack.
+  Logger.updateGlobalLogger loggerName (Logger.setLevel Logger.INFO)
+  getStatus Unmodified config
 
 getStatus :: SiteStatus -> Config -> IO ()
 getStatus oldStatus config = do
@@ -43,32 +46,40 @@ getStatus oldStatus config = do
 
 action :: SiteStatus -> SiteStatus -> Config -> IO ()
 
-action NotResponding Unmodified config = do
-  putStrLn "Site is back, but unchanged; emailing user."
-  sendMail "WWDC site back up, but unchanged" config
+action NotResponding Unmodified config =
+  let msg = (url config) ++ " is back up, but unchanged."
+  in do
+    warningM msg
+    sendMail msg config
 
-action _ Unmodified _ = putStrLn "Site unchanged."
+action _ Unmodified config = infoM $ (url config) ++ " unchanged."
 
-action _ Modified config = do
-  putStrLn "Site has changed! Emailing user."
-  sendMail "has changed!" config
+action _ Modified config =
+  let msg = (url config) ++ " has changed."
+  in do
+    warningM msg
+    sendMail msg config
 
-action Modified NotResponding _ = putStrLn "Site is not responding!"
+action Modified NotResponding config = infoM $ (url config) ++ " is not responding."
 
-action _ NotResponding config = do
-  putStrLn "Site is not responding! Emailing user."
-  sendMail "has stopped responding" config
+action _ NotResponding config =
+  let msg = (url config) ++ " is not responding."
+  in do
+    warningM msg
+    sendMail msg config
   
-sendMail :: T.Text -> Config -> IO ()
-sendMail subject config = do
-  msg <- simpleMail 
-           (toAddr $ dstEmail config) 
-           (toAddr $ srcEmail config)
-           (T.concat ["WWDC site ", subject])
-           (TL.concat [(TL.pack $ url config), " " , (TL.fromChunks [subject])])
-           ""
-           []
-  renderSendMail msg
+sendMail :: String -> Config -> IO ()
+sendMail msg config =
+  let msgText = T.pack msg
+  in do
+    noticeM $ "Sending email to " ++ (dstEmail config)
+    mail <- simpleMail (toAddr $ dstEmail config)
+                       (toAddr $ srcEmail config)
+                       msgText
+                       (TL.fromChunks [msgText]) -- why is this argument of type Text.Lazy???
+                       ""
+                       []
+    renderSendMail mail
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }
@@ -104,3 +115,32 @@ s = id
 
 findCanary :: [Tag BS.ByteString] -> Maybe BS.ByteString
 findCanary = liftM (fromAttrib "alt" . head) . listToMaybe . sections (~== s "<img>") . takeWhile (~/= s "</a>") . dropWhile (~/= s "<header class=\"hero\">")
+
+-- Convenience wrappers around hslogger
+--
+
+loggerName = "defaultLogger"
+
+debugM :: String -> IO ()
+debugM = Logger.debugM loggerName
+
+infoM :: String -> IO ()
+infoM = Logger.infoM loggerName
+
+noticeM :: String -> IO ()
+noticeM = Logger.noticeM loggerName
+
+warningM :: String -> IO ()
+warningM = Logger.warningM loggerName
+
+errorM :: String -> IO ()
+errorM = Logger.errorM loggerName
+
+criticalM :: String -> IO ()
+criticalM = Logger.criticalM loggerName
+
+alertM :: String -> IO ()
+alertM = Logger.alertM loggerName
+
+emergencyM :: String -> IO ()
+emergencyM = Logger.emergencyM loggerName

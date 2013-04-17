@@ -22,7 +22,7 @@ Executable wwdcc
                                 mtl,
                                 text,
                                 bytestring,
-                                hsyslog,
+                                hslogger,
                                 http-conduit,
                                 tagsoup,
                                 optparse-applicative,
