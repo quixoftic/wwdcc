@@ -43,11 +43,7 @@ getStatus oldStatus config = do
 
 action :: SiteStatus -> SiteStatus -> Config -> IO ()
 
-action NotResponding Unmodified config =
-  let msg = (url config) ++ " is back up, but unchanged."
-  in do
-    logWarning msg
-    sendMail msg config
+action NotResponding Unmodified config = logInfo $ (url config) ++ " is back up, but unchanged."
 
 action _ Unmodified config = logInfo $ (url config) ++ " unchanged."
 
