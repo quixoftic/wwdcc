@@ -14,7 +14,6 @@ module Wwdcc (startChecks) where
 
 import qualified Data.ByteString.Lazy as BS
 import Control.Concurrent (threadDelay)
-import qualified System.Log.Logger as Logger
 import Network.HTTP.Conduit hiding (def)
 import Text.HTML.TagSoup
 import Data.Maybe
@@ -25,14 +24,12 @@ import Network.Mail.Mime
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Config (Config(..))
+import Logging
 
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
 
 startChecks :: Config -> IO ()
-startChecks config = do
-  -- XXX dhess - temporary hack.
-  Logger.updateGlobalLogger loggerName (Logger.setLevel Logger.INFO)
-  getStatus Unmodified config
+startChecks = getStatus Unmodified
 
 getStatus :: SiteStatus -> Config -> IO ()
 getStatus oldStatus config = do
@@ -115,32 +112,3 @@ s = id
 
 findCanary :: [Tag BS.ByteString] -> Maybe BS.ByteString
 findCanary = liftM (fromAttrib "alt" . head) . listToMaybe . sections (~== s "<img>") . takeWhile (~/= s "</a>") . dropWhile (~/= s "<header class=\"hero\">")
-
--- Convenience wrappers around hslogger
---
-
-loggerName = "defaultLogger"
-
-debugM :: String -> IO ()
-debugM = Logger.debugM loggerName
-
-infoM :: String -> IO ()
-infoM = Logger.infoM loggerName
-
-noticeM :: String -> IO ()
-noticeM = Logger.noticeM loggerName
-
-warningM :: String -> IO ()
-warningM = Logger.warningM loggerName
-
-errorM :: String -> IO ()
-errorM = Logger.errorM loggerName
-
-criticalM :: String -> IO ()
-criticalM = Logger.criticalM loggerName
-
-alertM :: String -> IO ()
-alertM = Logger.alertM loggerName
-
-emergencyM :: String -> IO ()
-emergencyM = Logger.emergencyM loggerName

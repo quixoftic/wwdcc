@@ -13,40 +13,61 @@ module Main where
 import Control.Applicative
 import Data.Maybe
 import Options.Applicative
-import qualified MaybeConfig as MC
 import Wwdcc
-import Config
+import Logging
+import qualified Config as C
 
-parser :: Parser MC.Config
-parser = MC.Config
-         <$> optional (strOption
-                       (long "url"
+wwdcUrl = "https://developer.apple.com/wwdc/"
+description = "Send email to SRC_EMAIL from DEST_EMAIL when WWDC site changes or stops responding."
+
+data Options = Options { verbose :: !Bool
+                       , url :: !String
+                       , unmodifiedDelay :: !Int
+                       , modifiedDelay :: !Int
+                       , notRespondingDelay :: !Int
+                       , srcEmail :: !String
+                       , dstEmail :: !String }
+  
+parser :: Parser Options
+parser = Options
+         <$> switch (long "verbose"
+                     <> short 'v'
+                     <> help "Verbose logging")
+         <*> strOption (long "url"
                         <> short 'u'
                         <> metavar "URL"
-                        <> help "Override WWDC URL"))
-         <*> optional (option
-                       (long "unmodified-delay"
-                        <> metavar "DELAY"
-                        <> help "Delay (in seconds) between actions when site is unmodified"))
-         <*> optional (option
-                       (long "modified-delay"
-                        <> metavar "DELAY"
-                        <> help "Delay (in seconds) beteen actions when site has been modified"))
-         <*> optional (option
-                       (long "not-responding-delay"
-                        <> metavar "DELAY"
-                        <> help "Delay (in seconds) between actions when site is note responding"))
-         <*> optional (argument str ( metavar "SRC_EMAIL" ))
-         <*> optional (argument str ( metavar "DEST_EMAIL" ))
+                        <> value wwdcUrl
+                        <> help "Override WWDC URL")
+         <*> option (long "unmodified-delay"
+                     <> metavar "DELAY"
+                     <> value 30
+                     <> help "Delay (in seconds) between actions when site is unmodified")
+         <*> option (long "modified-delay"
+                     <> metavar "DELAY"
+                     <> value 60
+                     <> help "Delay (in seconds) beteen actions when site has been modified")
+         <*> option (long "not-responding-delay"
+                     <> metavar "DELAY"
+                     <> value 60
+                     <> help "Delay (in seconds) between actions when site is note responding")
+         <*> argument str ( metavar "SRC_EMAIL" )
+         <*> argument str ( metavar "DEST_EMAIL" )
 
 main :: IO ()
 main = do
-  cmdLineConfig <- execParser opts
-  startChecks $ fromJust $ MC.validateConfig $ MC.combineConfigs cmdLineConfig MC.defaultConfig
+  cmdLineOptions <- execParser opts
+  configureLogger (verbose cmdLineOptions)
+  startChecks $ buildConfig cmdLineOptions
   where
     opts = info (helper <*> parser)
       ( fullDesc
      <> progDesc description
      <> header "wwdcc - a WWDC checker" )
 
-description = "Send email to SRC_EMAIL from DEST_EMAIL when WWDC site changes or stops responding."
+buildConfig :: Options -> C.Config
+buildConfig options = C.Config { C.url = url options
+                               , C.unmodifiedDelay = unmodifiedDelay options
+                               , C.modifiedDelay = modifiedDelay options
+                               , C.notRespondingDelay = notRespondingDelay options
+                               , C.srcEmail = srcEmail options
+                               , C.dstEmail = dstEmail options }
