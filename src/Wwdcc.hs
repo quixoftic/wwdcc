@@ -12,6 +12,8 @@
 
 module Wwdcc (startChecks) where
 
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.ByteString.Lazy.UTF8 as BS
 import Control.Concurrent (threadDelay)
 import Network.HTTP.Conduit hiding (def)
@@ -21,8 +23,6 @@ import Control.Monad
 import Control.Exception (try)
 import Control.Monad.Reader
 import Network.Mail.Mime
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import Config (Config(..))
 import Logging
 
