@@ -28,8 +28,22 @@ import Logging
 
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
 
+welcomeBody :: [String]
+welcomeBody = [
+  "Hi!",
+  "",
+  "This is the wwdcc service writing to tell you that I am now monitoring",
+  "the WWDC homepage for updates and downtime. I will notify you as soon",
+  "as I detect a change.",
+  "",
+  "Humbly yours,",
+  "The wwdcc service"
+  ]
+
 startChecks :: Config -> IO ()
-startChecks = getStatus Unmodified
+startChecks config = do
+  sendMail "wwdcc is now activated!" (unlines welcomeBody) config
+  getStatus Unmodified config
 
 getStatus :: SiteStatus -> Config -> IO ()
 getStatus oldStatus config = do
