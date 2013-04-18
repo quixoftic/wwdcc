@@ -76,23 +76,29 @@ action NotResponding NotResponding config =
   
 action _ NotResponding config = logInfo $ (url config) ++ " is not responding (once)."
 
-sendMail :: String -> String -> Config -> IO ()
-sendMail subject body config = do
-  mail <- simpleMail (toAddr $ dstEmail config)
-                       (toAddr $ srcEmail config)
-                       (T.pack subject)
-                       (TL.fromChunks [T.pack body]) -- why is this argument of type Text.Lazy???
-                       ""
-                       []
-  if (testMode config)
-    then do
-      mailBS <- renderMail' mail
-      logInfo "Test mode: outputing email to log only"
-      logInfo $! BS.toString mailBS
-    else do
-      logNotice $! "Sending email to " ++ (dstEmail config)
-      renderSendMail mail
+-- Email generation
+--
 
+sendMail :: String -> String -> Config -> IO ()
+sendMail subject body config =
+  let mail = Mail { mailFrom = (toAddr $ dstEmail config)
+                  , mailTo = [(toAddr $ srcEmail config)]
+                  , mailCc = []
+                  , mailBcc = []
+                  , mailHeaders = [("Subject", T.pack subject)]
+                  , mailParts = [[ Part "text/plain; charset=utf-8" QuotedPrintableText Nothing []
+                                    $ BS.fromString body
+                                 ]]
+                  }
+  in
+   if (testMode config)
+     then do
+       mailBS <- renderMail' mail
+       logInfo "Test mode: outputing email to log only"
+       logInfo $! BS.toString mailBS
+     else do
+       logNotice $! "Sending email to " ++ (dstEmail config)
+       renderSendMail mail
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }
