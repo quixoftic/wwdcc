@@ -81,8 +81,8 @@ action _ NotResponding config = logInfo $ (url config) ++ " is not responding (o
 
 sendMail :: String -> String -> Config -> IO ()
 sendMail subject body config =
-  let mail = Mail { mailFrom = (toAddr $ dstEmail config)
-                  , mailTo = [(toAddr $ srcEmail config)]
+  let mail = Mail { mailFrom = (toAddr $ fromEmail config)
+                  , mailTo = [(toAddr $ toEmail config)]
                   , mailCc = []
                   , mailBcc = []
                   , mailHeaders = [("Subject", T.pack subject)]
@@ -97,7 +97,7 @@ sendMail subject body config =
        logInfo "Test mode: outputing email to log only"
        logInfo $! BS.toString mailBS
      else do
-       logNotice $! "Sending email to " ++ (dstEmail config)
+       logNotice $! "Sending email to " ++ (toEmail config)
        renderSendMail mail
   where
     toAddr :: String -> Address

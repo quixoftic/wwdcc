@@ -16,6 +16,6 @@ data Config = Config { daemon :: !Bool
                      , unmodifiedDelay :: !Int
                      , modifiedDelay :: !Int
                      , notRespondingDelay :: !Int
-                     , srcEmail :: !String
-                     , dstEmail :: !String
+                     , fromEmail :: !String
+                     , toEmail :: !String
                      } deriving Show

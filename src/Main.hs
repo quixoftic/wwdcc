@@ -21,7 +21,7 @@ import Logging
 import qualified Config as C
 
 wwdcUrl = "https://developer.apple.com/wwdc/"
-description = "Send email to DST_EMAIL from SRC_EMAIL when WWDC site changes or stops responding."
+description = "Send email to TO_EMAIL from FROM_EMAIL when WWDC site changes or stops responding."
 defaultUnmodifiedDelay = 30
 defaultModifiedDelay = 60
 defaultNotRespondingDelay = 30
@@ -34,8 +34,8 @@ data Options = Options { verbose :: !Bool
                        , unmodifiedDelay :: !Int
                        , modifiedDelay :: !Int
                        , notRespondingDelay :: !Int
-                       , srcEmail :: !String
-                       , dstEmail :: !String }
+                       , fromEmail :: !String
+                       , toEmail :: !String }
   
 parser :: Parser Options
 parser = Options
@@ -66,8 +66,8 @@ parser = Options
                      <> metavar "DELAY"
                      <> value defaultNotRespondingDelay
                      <> (help $! "Delay in seconds between actions when site doesn't respond for two cycles (default is " ++ (show defaultNotRespondingDelay) ++ ")"))
-         <*> argument str ( metavar "SRC_EMAIL" )
-         <*> argument str ( metavar "DEST_EMAIL" )
+         <*> argument str ( metavar "FROM_EMAIL" )
+         <*> argument str ( metavar "TO_EMAIL" )
 
 main :: IO ()
 main = do
@@ -91,5 +91,5 @@ buildConfig options = C.Config { C.daemon = daemon options
                                , C.unmodifiedDelay = unmodifiedDelay options
                                , C.modifiedDelay = modifiedDelay options
                                , C.notRespondingDelay = notRespondingDelay options
-                               , C.srcEmail = srcEmail options
-                               , C.dstEmail = dstEmail options }
+                               , C.fromEmail = fromEmail options
+                               , C.toEmail = toEmail options }
