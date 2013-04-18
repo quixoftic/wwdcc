@@ -51,35 +51,33 @@ action _ Modified config =
   let msg = (url config) ++ " has changed."
   in do
     logWarning msg
-    sendMail msg config
+    sendMail msg msg config
 
 -- Only email when the site is not responding for at least 2 cycles.
 action NotResponding NotResponding config =
   let msg = (url config) ++ " is not responding."
   in do
     logWarning msg
-    sendMail msg config
+    sendMail msg msg config
   
 action _ NotResponding config = logInfo $ (url config) ++ " is not responding (once)."
 
-sendMail :: String -> Config -> IO ()
-sendMail msg config =
-  let msgText = T.pack msg
-  in do
-    mail <- simpleMail (toAddr $ dstEmail config)
+sendMail :: String -> String -> Config -> IO ()
+sendMail subject body config = do
+  mail <- simpleMail (toAddr $ dstEmail config)
                        (toAddr $ srcEmail config)
-                       msgText
-                       (TL.fromChunks [msgText]) -- why is this argument of type Text.Lazy???
+                       (T.pack subject)
+                       (TL.fromChunks [T.pack body]) -- why is this argument of type Text.Lazy???
                        ""
                        []
-    if (testMode config)
-      then do
-        mailBS <- renderMail' mail
-        logInfo "Test mode: outputing email to log only"
-        logInfo $! BS.toString mailBS
-      else do
-        logNotice $! "Sending email to " ++ (dstEmail config)
-        renderSendMail mail
+  if (testMode config)
+    then do
+      mailBS <- renderMail' mail
+      logInfo "Test mode: outputing email to log only"
+      logInfo $! BS.toString mailBS
+    else do
+      logNotice $! "Sending email to " ++ (dstEmail config)
+      renderSendMail mail
 
   where
     toAddr :: String -> Address
