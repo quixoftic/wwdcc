@@ -12,7 +12,7 @@
 
 module Wwdcc (startChecks) where
 
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy.UTF8 as BS
 import Control.Concurrent (threadDelay)
 import Network.HTTP.Conduit hiding (def)
 import Text.HTML.TagSoup
@@ -66,14 +66,21 @@ sendMail :: String -> Config -> IO ()
 sendMail msg config =
   let msgText = T.pack msg
   in do
-    logNotice $ "Sending email to " ++ (dstEmail config)
     mail <- simpleMail (toAddr $ dstEmail config)
                        (toAddr $ srcEmail config)
                        msgText
                        (TL.fromChunks [msgText]) -- why is this argument of type Text.Lazy???
                        ""
                        []
-    unless (testMode config) $ renderSendMail mail
+    if (testMode config)
+      then do
+        mailBS <- renderMail' mail
+        logInfo "Test mode: outputing email to log only"
+        logInfo $! BS.toString mailBS
+      else do
+        logNotice $! "Sending email to " ++ (dstEmail config)
+        renderSendMail mail
+
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }

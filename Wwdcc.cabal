@@ -22,6 +22,7 @@ Executable wwdcc
                                 mtl,
                                 text,
                                 bytestring,
+                                utf8-string,
                                 hslogger,
                                 hdaemonize,
                                 http-conduit,
