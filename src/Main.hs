@@ -14,6 +14,10 @@ import Control.Applicative
 import Data.Maybe
 import Control.Monad (when)
 import System.Environment (getProgName)
+import System.Exit
+import System.Posix.Signals
+import Control.Concurrent
+import qualified Control.Exception as E
 import System.Posix.Daemonize
 import Options.Applicative
 import Wwdcc
@@ -75,14 +79,21 @@ main = do
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
   when (testMode cmdLineOptions) $ logWarning "WARNING: Running in test mode -- no email will be sent!"
-  if (daemon cmdLineOptions)
-    then daemonize $ startChecks $ buildConfig cmdLineOptions
-    else startChecks $ buildConfig cmdLineOptions
+  let config = buildConfig cmdLineOptions
+    in do
+      if (daemon cmdLineOptions)
+        then daemonize $ startUp config
+        else startUp config
   where
     opts = info (helper <*> parser)
-      ( fullDesc
-     <> progDesc description
-     <> header "wwdcc - a WWDC checker" )
+                ( fullDesc
+                  <> progDesc description
+                  <> header "wwdcc - a WWDC checker" )
+    startUp config = do
+      mainThreadId <- myThreadId
+      installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
+      installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
+      startChecks config
 
 buildConfig :: Options -> C.Config
 buildConfig options = C.Config { C.daemon = daemon options
@@ -93,3 +104,19 @@ buildConfig options = C.Config { C.daemon = daemon options
                                , C.notRespondingDelay = notRespondingDelay options
                                , C.fromEmail = fromEmail options
                                , C.toEmail = toEmail options }
+
+terminationBody :: [String]
+terminationBody = [
+  "Hi!",
+  "",
+  "This is the wwdcc service writing to tell you that I have been",
+  "terminated. I am no longer monitoring the WWDC homepage.",
+  "",
+  "FYI,",
+  "The wwdcc service"
+  ]
+  
+terminationHandler :: ThreadId -> C.Config -> IO ()
+terminationHandler tid config = do
+  sendMail "wwdcc was terminated!" (unlines terminationBody) config
+  E.throwTo tid ExitSuccess

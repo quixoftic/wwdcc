@@ -10,7 +10,9 @@
 -- possible 2013 announcement.
 --
 
-module Wwdcc (startChecks) where
+module Wwdcc ( startChecks
+             , sendMail
+             ) where
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL

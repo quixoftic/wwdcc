@@ -23,6 +23,7 @@ Executable wwdcc
                                 text,
                                 bytestring,
                                 utf8-string,
+                                unix,
                                 hslogger,
                                 hdaemonize,
                                 http-conduit,
