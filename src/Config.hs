@@ -14,6 +14,8 @@ data Config = Config { daemon :: !Bool
                      , testMode :: !Bool
                      , url :: !String
                      , period :: !Int
+                     , notifications :: !Int
+                     , wait :: !Int
                      , fromEmail :: !String
                      , toEmail :: !String
                      } deriving Show

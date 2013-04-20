@@ -27,6 +27,8 @@ import qualified Config as C
 wwdcUrl = "https://developer.apple.com/wwdc/"
 description = "Send email to TO_EMAIL from FROM_EMAIL when WWDC site changes or stops responding."
 defaultPeriod = 30
+defaultNotifications = 3
+defaultWait = 30
 
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
@@ -34,6 +36,8 @@ data Options = Options { verbose :: !Bool
                        , testMode :: !Bool
                        , url :: !String
                        , period :: !Int
+                       , notifications :: !Int
+                       , wait :: !Int
                        , fromEmail :: !String
                        , toEmail :: !String }
   
@@ -59,12 +63,25 @@ parser = Options
                      <> metavar "DELAY"
                      <> value defaultPeriod
                      <> (help $! "Time between pings, in seconds (default is " ++ (show defaultPeriod) ++ ")"))
+         <*> option (long "notifications"
+                     <> short 'n'
+                     <> metavar "NUM"
+                     <> value defaultNotifications
+                     <> (help $! "Number of notifications to send when a change is detected (default is " ++ (show defaultNotifications) ++ ")"))
+         <*> option (long "wait"
+                     <> short 'w'
+                     <> metavar "DELAY"
+                     <> value defaultWait
+                     <> (help $! "Time between notifications, in seconds (default is " ++ (show defaultWait) ++ ")"))
          <*> argument str ( metavar "FROM_EMAIL" )
          <*> argument str ( metavar "TO_EMAIL" )
 
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
+  when ((notifications cmdLineOptions) < 0) $ do
+    putStrLn "Number of notifications must be a non-negative integer."
+    exitFailure
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
   when (testMode cmdLineOptions) $ logWarning "WARNING: Running in test mode -- no email will be sent!"
@@ -89,6 +106,8 @@ buildConfig options = C.Config { C.daemon = daemon options
                                , C.testMode = testMode options
                                , C.url = url options
                                , C.period = period options
+                               , C.notifications = notifications options
+                               , C.wait = wait options
                                , C.fromEmail = fromEmail options
                                , C.toEmail = toEmail options }
 

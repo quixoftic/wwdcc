@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.ByteString.Lazy.UTF8 as BS
 import Control.Concurrent (threadDelay)
+import System.Exit
 import Network.HTTP.Conduit hiding (def)
 import Text.HTML.TagSoup
 import Data.Maybe
@@ -63,11 +64,37 @@ action _ NotResponding Unmodified config = logInfo $ (url config) ++ " is back u
 
 action _ _ Unmodified config = logInfo $ (url config) ++ " unchanged."
 
+-- Modified: send notifications and exit.
+--
 action _ _ Modified config =
   let msg = (url config) ++ " has changed."
+      sendNotification 0 = exitSuccess -- quit the program.
+      sendNotification 1 = do
+        sendMail msg 
+                 (unlines ["Hi!",
+                           "",
+                           "This is the last notification I will send. I am now exiting.",
+                           "",
+                           "FYI,",
+                           "The wwdcc service"
+                          ])
+                 config
+        sendNotification 0
+      sendNotification nleft = do
+        sendMail msg
+                 (unlines ["Hi!",
+                           "",
+                           "I will send " ++ (show $ nleft - 1) ++ " more notifications.",
+                           "",
+                           "FYI,",
+                           "The wwdcc service"
+                           ])
+                 config
+        threadDelay ((wait config) * 10^6) 
+        sendNotification $ nleft - 1
   in do
     logWarning msg
-    sendMail msg msg config
+    sendNotification $ notifications config
 
 -- Email once, as soon as the site doesn't respond twice in a row, to
 -- give the user a heads-up that things may be about to change.
