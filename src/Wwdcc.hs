@@ -45,38 +45,42 @@ welcomeBody = [
 startChecks :: Config -> IO ()
 startChecks config = do
   sendMail "wwdcc is now activated!" (unlines welcomeBody) config
-  getStatus Unmodified config
+  getStatus Unmodified Unmodified config
 
-getStatus :: SiteStatus -> Config -> IO ()
-getStatus oldStatus config = do
+getStatus :: SiteStatus -> SiteStatus -> Config -> IO ()
+getStatus oldestStatus oldStatus config = do
   newStatus <- siteStatus $ url config
-  action oldStatus newStatus config
+  action oldestStatus oldStatus newStatus config
   threadDelay ((delayFor newStatus config) * 10^6) 
-  getStatus newStatus config
+  getStatus oldStatus newStatus config
 
--- Take action depending on site status.
+-- Take action depending on the last 3 site statuses.
 --
 
-action :: SiteStatus -> SiteStatus -> Config -> IO ()
+action :: SiteStatus -> SiteStatus -> SiteStatus -> Config -> IO ()
 
-action NotResponding Unmodified config = logInfo $ (url config) ++ " is back up, but unchanged."
+action _ NotResponding Unmodified config = logInfo $ (url config) ++ " is back up, but unchanged."
 
-action _ Unmodified config = logInfo $ (url config) ++ " unchanged."
+action _ _ Unmodified config = logInfo $ (url config) ++ " unchanged."
 
-action _ Modified config =
+action _ _ Modified config =
   let msg = (url config) ++ " has changed."
   in do
     logWarning msg
     sendMail msg msg config
 
--- Only email when the site is not responding for at least 2 cycles.
-action NotResponding NotResponding config =
+-- Email once, as soon as the site doesn't respond twice in a row, to
+-- give the user a heads-up that things may be about to change.
+--
+-- Don't email for one-time timeouts, nor during extended outages.
+--
+action Unmodified NotResponding NotResponding config =
   let msg = (url config) ++ " is not responding."
   in do
     logWarning msg
     sendMail msg msg config
   
-action _ NotResponding config = logInfo $ (url config) ++ " is not responding (once)."
+action _ _ NotResponding config = logInfo $ (url config) ++ " is not responding."
 
 -- Email generation
 --
