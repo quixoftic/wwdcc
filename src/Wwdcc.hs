@@ -51,7 +51,7 @@ getStatus :: SiteStatus -> SiteStatus -> Config -> IO ()
 getStatus oldestStatus oldStatus config = do
   newStatus <- siteStatus $ url config
   action oldestStatus oldStatus newStatus config
-  threadDelay ((delayFor newStatus config) * 10^6) 
+  threadDelay ((period config) * 10^6) 
   getStatus oldStatus newStatus config
 
 -- Take action depending on the last 3 site statuses.
@@ -108,11 +108,6 @@ sendMail subject body config =
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }
-
-delayFor :: SiteStatus -> Config -> Int
-delayFor Unmodified = unmodifiedDelay
-delayFor Modified = modifiedDelay
-delayFor NotResponding = notRespondingDelay
 
 siteStatus :: String -> IO (SiteStatus)
 siteStatus url = do

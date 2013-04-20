@@ -13,9 +13,7 @@ module Config (Config(..)) where
 data Config = Config { daemon :: !Bool
                      , testMode :: !Bool
                      , url :: !String
-                     , unmodifiedDelay :: !Int
-                     , modifiedDelay :: !Int
-                     , notRespondingDelay :: !Int
+                     , period :: !Int
                      , fromEmail :: !String
                      , toEmail :: !String
                      } deriving Show

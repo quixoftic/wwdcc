@@ -26,18 +26,14 @@ import qualified Config as C
 
 wwdcUrl = "https://developer.apple.com/wwdc/"
 description = "Send email to TO_EMAIL from FROM_EMAIL when WWDC site changes or stops responding."
-defaultUnmodifiedDelay = 30
-defaultModifiedDelay = 60
-defaultNotRespondingDelay = 30
+defaultPeriod = 30
 
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
                        , daemon :: !Bool
                        , testMode :: !Bool
                        , url :: !String
-                       , unmodifiedDelay :: !Int
-                       , modifiedDelay :: !Int
-                       , notRespondingDelay :: !Int
+                       , period :: !Int
                        , fromEmail :: !String
                        , toEmail :: !String }
   
@@ -58,18 +54,11 @@ parser = Options
                         <> metavar "URL"
                         <> value wwdcUrl
                         <> (help $! "Override WWDC URL (default is " ++ wwdcUrl ++ ")"))
-         <*> option (long "unmodified-delay"
+         <*> option (long "period"
+                     <> short 'p'
                      <> metavar "DELAY"
-                     <> value defaultUnmodifiedDelay
-                     <> (help $! "Delay in seconds between actions when site is unmodified (default is " ++ (show defaultUnmodifiedDelay) ++ ")"))
-         <*> option (long "modified-delay"
-                     <> metavar "DELAY"
-                     <> value defaultModifiedDelay
-                     <> (help $! "Delay in seconds beteen actions when site has been modified (default is " ++ (show defaultModifiedDelay) ++ ")"))
-         <*> option (long "not-responding-delay"
-                     <> metavar "DELAY"
-                     <> value defaultNotRespondingDelay
-                     <> (help $! "Delay in seconds between actions when site doesn't respond for two cycles (default is " ++ (show defaultNotRespondingDelay) ++ ")"))
+                     <> value defaultPeriod
+                     <> (help $! "Time between pings, in seconds (default is " ++ (show defaultPeriod) ++ ")"))
          <*> argument str ( metavar "FROM_EMAIL" )
          <*> argument str ( metavar "TO_EMAIL" )
 
@@ -99,9 +88,7 @@ buildConfig :: Options -> C.Config
 buildConfig options = C.Config { C.daemon = daemon options
                                , C.testMode = testMode options
                                , C.url = url options
-                               , C.unmodifiedDelay = unmodifiedDelay options
-                               , C.modifiedDelay = modifiedDelay options
-                               , C.notRespondingDelay = notRespondingDelay options
+                               , C.period = period options
                                , C.fromEmail = fromEmail options
                                , C.toEmail = toEmail options }
 
