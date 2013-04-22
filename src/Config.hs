@@ -12,14 +12,15 @@ module Config ( Config(..)
               , Email(..)
               ) where
 
+import qualified Data.Text as T
 import Data.Maybe
 
-data Email = Email { fromEmail :: !String
-                   , toEmail:: !String
+data Email = Email { fromEmail :: !T.Text
+                   , toEmail:: !T.Text
                    } deriving (Show, Eq)
                      
 data Config = Config { daemon :: !Bool
-                     , url :: !String
+                     , url :: !T.Text
                      , period :: !Int
                      , notifications :: !Int
                      , wait :: !Int

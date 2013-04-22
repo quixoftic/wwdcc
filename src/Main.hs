@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- Module      : Main
 -- Copyright   : Copyright © 2013, Quixoftic, LLC <src@quixoftic.com>
 -- License     : BSD3 (see LICENSE file)
@@ -17,6 +18,7 @@ import System.Environment (getProgName)
 import System.Exit
 import System.Posix.Signals
 import Control.Concurrent
+import qualified Data.Text as T
 import qualified Control.Exception as E
 import Data.List.Utils
 import System.Posix.Daemonize
@@ -52,7 +54,7 @@ parseEmail :: String -> Either ParseError C.Email
 parseEmail str = parseEmail' $ split "," str
   where
     parseEmail' :: [String] -> Either ParseError C.Email
-    parseEmail' (x:y:[]) = Right $ C.Email x y
+    parseEmail' (x:y:[]) = Right $ C.Email (T.pack x) (T.pack y)
     parseEmail' _ = Left $ ErrorMsg "Email format is from@example.com,to@example.com"
 
 parser :: Parser Options
@@ -125,14 +127,13 @@ main = do
 
 buildConfig :: Options -> C.Config
 buildConfig options = C.Config { C.daemon = daemon options
-                               , C.url = url options
+                               , C.url = T.pack $ url options
                                , C.period = period options
                                , C.notifications = notifications options
                                , C.wait = wait options
-                               , C.email = email options
-                               }
+                               , C.email = email options }
 
-terminationBody :: [String]
+terminationBody :: [T.Text]
 terminationBody = [
   "Hi!",
   "",
@@ -146,5 +147,5 @@ terminationBody = [
 terminationHandler :: ThreadId -> C.Config -> IO ()
 terminationHandler tid config = do
   logWarning "Terminated."
-  sendMail "wwdcc was terminated!" (unlines terminationBody) (C.email config)
+  sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
   E.throwTo tid ExitSuccess

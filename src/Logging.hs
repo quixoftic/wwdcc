@@ -22,6 +22,7 @@ module Logging ( verboseLogging
                , logEmergency 
                ) where
                  
+import qualified Data.Text as T
 import System.Log.Logger
 import System.Log.Handler.Syslog
 
@@ -38,26 +39,29 @@ logToSyslog progName = do
 -- Convenience wrappers around hslogger functions of same name.
 --
 
-logDebug :: String -> IO ()
-logDebug = debugM defaultName
+wrapLog :: (String -> String -> IO ()) -> T.Text -> IO ()
+wrapLog logf = (logf defaultName) . T.unpack
 
-logInfo :: String -> IO ()
-logInfo = infoM defaultName
+logDebug :: T.Text -> IO ()
+logDebug = wrapLog debugM
 
-logNotice :: String -> IO ()
-logNotice = noticeM defaultName
+logInfo :: T.Text -> IO ()
+logInfo = wrapLog infoM
 
-logWarning :: String -> IO ()
-logWarning = warningM defaultName
+logNotice :: T.Text -> IO ()
+logNotice = wrapLog noticeM
 
-logError :: String -> IO ()
-logError = errorM defaultName
+logWarning :: T.Text -> IO ()
+logWarning = wrapLog warningM
 
-logCritical :: String -> IO ()
-logCritical = criticalM defaultName
+logError :: T.Text -> IO ()
+logError = wrapLog errorM
 
-logAlert :: String -> IO ()
-logAlert = alertM defaultName
+logCritical :: T.Text -> IO ()
+logCritical = wrapLog criticalM
 
-logEmergency :: String -> IO ()
-logEmergency = emergencyM defaultName
+logAlert :: T.Text -> IO ()
+logAlert = wrapLog alertM
+
+logEmergency :: T.Text -> IO ()
+logEmergency = wrapLog emergencyM

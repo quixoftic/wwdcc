@@ -16,6 +16,7 @@ module Wwdcc ( startChecks
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as E
 import qualified Data.ByteString.Lazy.UTF8 as BS
 import Control.Concurrent (threadDelay)
 import System.Exit
@@ -31,7 +32,7 @@ import Logging
 
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
 
-welcomeBody :: [String]
+welcomeBody :: [T.Text]
 welcomeBody = [
   "Hi!",
   "",
@@ -45,7 +46,7 @@ welcomeBody = [
 
 startChecks :: Config -> IO ()
 startChecks config = do
-  sendMail "wwdcc is now activated!" (unlines welcomeBody) (email config)
+  sendMail "wwdcc is now activated!" (T.unlines welcomeBody) (email config)
   getStatus Unmodified Unmodified config
 
 getStatus :: SiteStatus -> SiteStatus -> Config -> IO ()
@@ -60,18 +61,20 @@ getStatus oldestStatus oldStatus config = do
 
 action :: SiteStatus -> SiteStatus -> SiteStatus -> Config -> IO ()
 
-action _ NotResponding Unmodified config = logInfo $ (url config) ++ " is back up, but unchanged."
+action _ NotResponding Unmodified config = logInfo $ T.unwords [url config, "is back up, but unchanged."]
 
-action _ _ Unmodified config = logInfo $ (url config) ++ " unchanged."
+action _ _ Unmodified config = logInfo $ T.unwords [url config, "unchanged."]
 
 -- Modified: send notifications and exit.
 --
 action _ _ Modified config =
-  let msg = (url config) ++ " has changed."
+  let msg = T.unwords [url config, "has changed."]
       sendNotification 0 = exitSuccess -- quit the program.
       sendNotification 1 = do
         sendMail msg 
-                 (unlines ["Hi!",
+                 (T.unlines ["Hi!",
+                           "",
+                           msg,
                            "",
                            "This is the last notification I will send. I am now exiting.",
                            "",
@@ -82,9 +85,9 @@ action _ _ Modified config =
         sendNotification 0
       sendNotification nleft = do
         sendMail msg
-                 (unlines ["Hi!",
+                 (T.unlines ["Hi!",
                            "",
-                           "I will send " ++ (show $ nleft - 1) ++ " more notifications.",
+                           msg,
                            "",
                            "FYI,",
                            "The wwdcc service"
@@ -102,34 +105,34 @@ action _ _ Modified config =
 -- Don't email for one-time timeouts, nor during extended outages.
 --
 action Unmodified NotResponding NotResponding config =
-  let msg = (url config) ++ " is not responding."
+  let msg = T.unwords [url config, "is not responding."]
   in do
     logWarning msg
     sendMail msg msg (email config)
   
-action _ _ NotResponding config = logInfo $ (url config) ++ " is not responding."
+action _ _ NotResponding config = logInfo $ T.unwords [url config, "is not responding."]
 
 -- Email generation
 --
 
-sendMail :: String -> String -> Maybe Email -> IO ()
+sendMail :: T.Text -> T.Text -> Maybe Email -> IO ()
 sendMail _ _ Nothing = return ()
 sendMail subject body (Just email) = do
-  logNotice $! "Sending email to " ++ (toEmail email)
+  logNotice $ T.unwords ["Sending email to", toEmail email]
   renderSendMail Mail { mailFrom = (toAddr $ fromEmail email)
                       , mailTo = [(toAddr $ toEmail email)]
                       , mailCc = []
                       , mailBcc = []
-                      , mailHeaders = [("Subject", T.pack subject)]
+                      , mailHeaders = [("Subject", subject)]
                       , mailParts = [[ Part "text/plain; charset=utf-8" QuotedPrintableText Nothing []
-                                       $ BS.fromString body
+                                       $ E.encodeUtf8 $ TL.fromChunks [body]
                                      ]]
                       }
   where
-    toAddr :: String -> Address
-    toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }
+    toAddr :: T.Text -> Address
+    toAddr str = Address { addressName = Nothing, addressEmail = str }
 
-siteStatus :: String -> IO (SiteStatus)
+siteStatus :: T.Text -> IO (SiteStatus)
 siteStatus url = do
   result <- checkWwdc url
   case result of
@@ -137,9 +140,9 @@ siteStatus url = do
     Right False -> return Unmodified
     Right True -> return Modified
     
-checkWwdc :: String -> IO (Either HttpException Bool)
+checkWwdc :: T.Text -> IO (Either HttpException Bool)
 checkWwdc url = try $ do
-  xml <- simpleHttp url
+  xml <- simpleHttp $ T.unpack url
   return $ pageIsModified xml
 
 expected = "WWDC 2012. June 11-15 in San Francisco. It's the week we've all been waiting for."
