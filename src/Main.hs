@@ -18,6 +18,7 @@ import System.Exit
 import System.Posix.Signals
 import Control.Concurrent
 import qualified Control.Exception as E
+import Data.List.Utils
 import System.Posix.Daemonize
 import Options.Applicative
 import Wwdcc
@@ -33,14 +34,20 @@ defaultWait = 30
 data Options = Options { verbose :: !Bool
                        , syslog :: !Bool
                        , daemon :: !Bool
-                       , testMode :: !Bool
                        , url :: !String
                        , period :: !Int
                        , notifications :: !Int
                        , wait :: !Int
-                       , fromEmail :: !String
-                       , toEmail :: !String }
+                       , email :: Maybe C.Email
+                       }
   
+parseEmail :: String -> Either ParseError C.Email
+parseEmail str = parseEmail' $ split "," str
+  where
+    parseEmail' :: [String] -> Either ParseError C.Email
+    parseEmail' (x:y:[]) = Right $ C.Email x y
+    parseEmail' _ = Left $ ErrorMsg "Email format is from@example.com,to@example.com"
+
 parser :: Parser Options
 parser = Options
          <$> switch (long "verbose"
@@ -51,8 +58,6 @@ parser = Options
                      <> help "Log to syslog (default is stderr)")
          <*> switch (long "daemon"
                      <> help "Run as a daemon (implies --syslog)")
-         <*> switch (long "test"
-                     <> help "Run in test mode, no email will be sent")
          <*> strOption (long "url"
                         <> short 'u'
                         <> metavar "URL"
@@ -73,8 +78,11 @@ parser = Options
                      <> metavar "DELAY"
                      <> value defaultWait
                      <> (help $! "Time between notifications, in seconds (default is " ++ (show defaultWait) ++ ")"))
-         <*> argument str ( metavar "FROM_EMAIL" )
-         <*> argument str ( metavar "TO_EMAIL" )
+         <*> optional (nullOption (long "email"
+                                   <> short 'e'
+                                   <> metavar "FROM_EMAIL,TO_EMAIL"
+                                   <> reader parseEmail
+                                   <> help "Send email notifications from/to address, comma-delimited (default is not to send email notifications)."))
 
 main :: IO ()
 main = do
@@ -84,9 +92,9 @@ main = do
     exitFailure
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
-  when (testMode cmdLineOptions) $ logWarning "WARNING: Running in test mode -- no email will be sent!"
   let config = buildConfig cmdLineOptions
     in do
+      when (Nothing == (C.email config)) $ logWarning "Warning: no email notifications will be sent! Running anyway...."
       if (daemon cmdLineOptions)
         then daemonize $ startUp config
         else startUp config
@@ -103,13 +111,12 @@ main = do
 
 buildConfig :: Options -> C.Config
 buildConfig options = C.Config { C.daemon = daemon options
-                               , C.testMode = testMode options
                                , C.url = url options
                                , C.period = period options
                                , C.notifications = notifications options
                                , C.wait = wait options
-                               , C.fromEmail = fromEmail options
-                               , C.toEmail = toEmail options }
+                               , C.email = email options
+                               }
 
 terminationBody :: [String]
 terminationBody = [
@@ -124,5 +131,6 @@ terminationBody = [
   
 terminationHandler :: ThreadId -> C.Config -> IO ()
 terminationHandler tid config = do
-  sendMail "wwdcc was terminated!" (unlines terminationBody) config
+  logWarning "Terminated."
+  sendMail "wwdcc was terminated!" (unlines terminationBody) (C.email config)
   E.throwTo tid ExitSuccess

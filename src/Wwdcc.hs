@@ -26,7 +26,7 @@ import Control.Monad
 import Control.Exception (try)
 import Control.Monad.Reader
 import Network.Mail.Mime
-import Config (Config(..))
+import Config
 import Logging
 
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
@@ -45,7 +45,7 @@ welcomeBody = [
 
 startChecks :: Config -> IO ()
 startChecks config = do
-  sendMail "wwdcc is now activated!" (unlines welcomeBody) config
+  sendMail "wwdcc is now activated!" (unlines welcomeBody) (email config)
   getStatus Unmodified Unmodified config
 
 getStatus :: SiteStatus -> SiteStatus -> Config -> IO ()
@@ -78,7 +78,7 @@ action _ _ Modified config =
                            "FYI,",
                            "The wwdcc service"
                           ])
-                 config
+                 (email config)
         sendNotification 0
       sendNotification nleft = do
         sendMail msg
@@ -89,7 +89,7 @@ action _ _ Modified config =
                            "FYI,",
                            "The wwdcc service"
                            ])
-                 config
+                 (email config)
         threadDelay ((wait config) * 10^6) 
         sendNotification $ nleft - 1
   in do
@@ -105,33 +105,26 @@ action Unmodified NotResponding NotResponding config =
   let msg = (url config) ++ " is not responding."
   in do
     logWarning msg
-    sendMail msg msg config
+    sendMail msg msg (email config)
   
 action _ _ NotResponding config = logInfo $ (url config) ++ " is not responding."
 
 -- Email generation
 --
 
-sendMail :: String -> String -> Config -> IO ()
-sendMail subject body config =
-  let mail = Mail { mailFrom = (toAddr $ fromEmail config)
-                  , mailTo = [(toAddr $ toEmail config)]
-                  , mailCc = []
-                  , mailBcc = []
-                  , mailHeaders = [("Subject", T.pack subject)]
-                  , mailParts = [[ Part "text/plain; charset=utf-8" QuotedPrintableText Nothing []
-                                    $ BS.fromString body
-                                 ]]
-                  }
-  in
-   if (testMode config)
-     then do
-       mailBS <- renderMail' mail
-       logInfo "Test mode: outputing email to log only"
-       logInfo $! BS.toString mailBS
-     else do
-       logNotice $! "Sending email to " ++ (toEmail config)
-       renderSendMail mail
+sendMail :: String -> String -> Maybe Email -> IO ()
+sendMail _ _ Nothing = return ()
+sendMail subject body (Just email) = do
+  logNotice $! "Sending email to " ++ (toEmail email)
+  renderSendMail Mail { mailFrom = (toAddr $ fromEmail email)
+                      , mailTo = [(toAddr $ toEmail email)]
+                      , mailCc = []
+                      , mailBcc = []
+                      , mailHeaders = [("Subject", T.pack subject)]
+                      , mailParts = [[ Part "text/plain; charset=utf-8" QuotedPrintableText Nothing []
+                                       $ BS.fromString body
+                                     ]]
+                      }
   where
     toAddr :: String -> Address
     toAddr str = Address { addressName = Nothing, addressEmail = T.pack str }

@@ -29,5 +29,6 @@ Executable wwdcc
                                 http-conduit,
                                 tagsoup,
                                 optparse-applicative,
-                                mime-mail
+                                mime-mail,
+                                MissingH
 

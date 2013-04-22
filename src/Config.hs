@@ -8,14 +8,20 @@
 -- Wwdcc configuration.
 --
 
-module Config (Config(..)) where
+module Config ( Config(..)
+              , Email(..)
+              ) where
 
+import Data.Maybe
+
+data Email = Email { fromEmail :: !String
+                   , toEmail:: !String
+                   } deriving (Show, Eq)
+                     
 data Config = Config { daemon :: !Bool
-                     , testMode :: !Bool
                      , url :: !String
                      , period :: !Int
                      , notifications :: !Int
                      , wait :: !Int
-                     , fromEmail :: !String
-                     , toEmail :: !String
-                     } deriving Show
+                     , email :: Maybe Email
+                     } deriving (Show, Eq)
