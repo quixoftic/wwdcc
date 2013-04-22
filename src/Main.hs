@@ -103,9 +103,6 @@ parser = Options
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
-  when ((notifications cmdLineOptions) < 0) $ do
-    putStrLn "Number of notifications must be a non-negative integer."
-    exitFailure
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
   let config = buildConfig cmdLineOptions
