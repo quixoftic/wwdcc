@@ -55,34 +55,38 @@ parser = Options
                      <> help "Verbose logging")
          <*> switch (long "syslog"
                      <> short 's'
-                     <> help "Log to syslog (default is stderr)")
+                     <> help "Log to syslog (default: log to stderr)")
          <*> switch (long "daemon"
                      <> help "Run as a daemon (implies --syslog)")
          <*> strOption (long "url"
                         <> short 'u'
                         <> metavar "URL"
                         <> value wwdcUrl
-                        <> (help $! "Override WWDC URL (default is " ++ wwdcUrl ++ ")"))
+                        <> showDefault
+                        <> help "Override WWDC URL")
          <*> option (long "period"
                      <> short 'p'
                      <> metavar "DELAY"
                      <> value defaultPeriod
-                     <> (help $! "Time between pings, in seconds (default is " ++ (show defaultPeriod) ++ ")"))
+                     <> showDefault
+                     <> help "Time between pings, in seconds")
          <*> option (long "notifications"
                      <> short 'n'
                      <> metavar "NUM"
                      <> value defaultNotifications
-                     <> (help $! "Number of notifications to send when a change is detected (default is " ++ (show defaultNotifications) ++ ")"))
+                     <> showDefault
+                     <> help "Number of notifications to send when a change is detected")
          <*> option (long "wait"
                      <> short 'w'
                      <> metavar "DELAY"
                      <> value defaultWait
-                     <> (help $! "Time between notifications, in seconds (default is " ++ (show defaultWait) ++ ")"))
+                     <> showDefault
+                     <> help "Time between notifications, in seconds")
          <*> optional (nullOption (long "email"
                                    <> short 'e'
                                    <> metavar "FROM_EMAIL,TO_EMAIL"
                                    <> reader parseEmail
-                                   <> help "Send email notifications from/to address, comma-delimited (default is not to send email notifications)."))
+                                   <> help "Send email notifications from/to address, comma-delimited (default: don't send email notifications)."))
 
 main :: IO ()
 main = do
