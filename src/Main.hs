@@ -41,6 +41,13 @@ data Options = Options { verbose :: !Bool
                        , email :: Maybe C.Email
                        }
   
+parsePositiveInt :: String -> Either ParseError Int
+parsePositiveInt str = parsePositiveInt' $ (reads str :: [(Int, String)])
+  where
+    parsePositiveInt' :: [(Int, String)] -> Either ParseError Int
+    parsePositiveInt' [(x, "")] = if (x > 0) then Right x else Left ShowHelpText
+    parsePositiveInt' _ = Left ShowHelpText
+  
 parseEmail :: String -> Either ParseError C.Email
 parseEmail str = parseEmail' $ split "," str
   where
@@ -64,24 +71,27 @@ parser = Options
                         <> value wwdcUrl
                         <> showDefault
                         <> help "Override WWDC URL")
-         <*> option (long "period"
-                     <> short 'p'
-                     <> metavar "DELAY"
-                     <> value defaultPeriod
-                     <> showDefault
-                     <> help "Time between pings, in seconds")
-         <*> option (long "notifications"
-                     <> short 'n'
-                     <> metavar "NUM"
-                     <> value defaultNotifications
-                     <> showDefault
-                     <> help "Number of notifications to send when a change is detected")
-         <*> option (long "wait"
-                     <> short 'w'
-                     <> metavar "DELAY"
-                     <> value defaultWait
-                     <> showDefault
-                     <> help "Time between notifications, in seconds")
+         <*> nullOption (long "period"
+                         <> short 'p'
+                         <> metavar "DELAY"
+                         <> value defaultPeriod
+                         <> showDefault
+                         <> reader parsePositiveInt
+                         <> help "Time between pings, in seconds")
+         <*> nullOption (long "notifications"
+                         <> short 'n'
+                         <> metavar "NUM"
+                         <> value defaultNotifications
+                         <> showDefault
+                         <> reader parsePositiveInt
+                         <> help "Number of notifications to send when a change is detected")
+         <*> nullOption (long "wait"
+                         <> short 'w'
+                         <> metavar "DELAY"
+                         <> value defaultWait
+                         <> showDefault
+                         <> reader parsePositiveInt
+                         <> help "Time between notifications, in seconds")
          <*> optional (nullOption (long "email"
                                    <> short 'e'
                                    <> metavar "FROM_EMAIL,TO_EMAIL"
