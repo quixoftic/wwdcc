@@ -26,7 +26,7 @@ import Logging
 import qualified Config as C
 
 wwdcUrl = "https://developer.apple.com/wwdc/"
-description = "Send email to TO_EMAIL from FROM_EMAIL when WWDC site changes or stops responding."
+description = "Send a notification(s) when WWDC site changes or stops responding."
 defaultPeriod = 30
 defaultNotifications = 3
 defaultWait = 30
