@@ -13,6 +13,8 @@
 module Wwdcc ( startChecks
              , sendMail
              , sendSms
+             , sendSms'
+             , HttpException
              ) where
 
 import qualified Data.Text as T
@@ -124,22 +126,28 @@ twilioSendSmsUri accountSid = T.concat [ "https://api.twilio.com/2010-04-01/Acco
                                        , accountSid
                                        , "/SMS/Messages.json" ]
 
-sendSms :: T.Text -> Maybe Twilio -> IO ()
-sendSms _ Nothing = return ()
-sendSms body (Just twilio) = do
+sendSms' :: T.Text -> Maybe Twilio -> IO ()
+sendSms' _ Nothing = return ()
+sendSms' body (Just twilio) = do
   logNotice $ T.unwords ["Sending SMS to", toPhone twilio, "with text:", body]
-  E.catch (do request' <- parseUrl $ T.unpack $ twilioSendSmsUri (accountSid twilio)
-              let request = urlEncodedBody [ ("From", TE.encodeUtf8 $ fromPhone twilio)
-                                           , ("To", TE.encodeUtf8 $ toPhone twilio)
-                                           , ("Body", TE.encodeUtf8 body) ] $
-                            applyBasicAuth (TE.encodeUtf8 $ accountSid twilio)
-                                           (TE.encodeUtf8 $ authToken twilio)
-                                           request'
-              result <- withManager $ httpLbs request
-              return ())
-          (\(err :: HttpException) -> do logError $ T.concat [ "Unable to send SMS notification! ("
-                                                              , T.pack $ show err
-                                                              , ")" ])
+  request' <- parseUrl $ T.unpack $ twilioSendSmsUri (accountSid twilio)
+  let request = urlEncodedBody [ ("From", TE.encodeUtf8 $ fromPhone twilio)
+                               , ("To", TE.encodeUtf8 $ toPhone twilio)
+                               , ("Body", TE.encodeUtf8 body) ] $
+                applyBasicAuth (TE.encodeUtf8 $ accountSid twilio)
+                               (TE.encodeUtf8 $ authToken twilio)
+                               request'
+  result <- withManager $ httpLbs request
+  return ()
+                        
+sendSms :: T.Text -> Maybe Twilio -> IO ()
+sendSms body twilio = do
+  E.catch (sendSms' body twilio) handler
+  where
+    handler :: HttpException -> IO ()
+    handler err = logError $ T.concat [ "Unable to send SMS notification! ("
+                                      , T.pack $ show err
+                                      , ")" ]
 
 -- Email generation
 --

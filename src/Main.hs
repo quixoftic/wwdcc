@@ -215,18 +215,25 @@ main = do
                   <> header "wwdcc - a WWDC checker" )
     startUp config = do
       E.catch (sendMail "wwdcc is now activated!" (T.unlines welcomeBody) (C.email config)) sendMailHandler
-      sendSms "wwdcc is now activated!" (C.twilio config)
+      E.catch (sendSms' "wwdcc is now activated!" (C.twilio config)) sendSmsHandler
       mainThreadId <- myThreadId
       installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
       startChecks config
       where
-        sendMailHandler :: E.ErrorCall -> IO ()
+        sendMailHandler :: E.SomeException -> IO ()
         sendMailHandler _ = do
           logError $ T.unlines [ "wwdcc uses sendmail for email notifications, but your sendmail config appears"
-                               , "to be broken." 
-                               , ""
-                               , "Exiting."]
+                               , "to be broken."]
+          logError "Exiting."
+          exitFailure
+          
+        sendSmsHandler :: HttpException -> IO ()
+        sendSmsHandler err = do
+          logError $ T.unlines [ "Unable to send SMS notification. The error was:"
+                               , T.pack $ show err 
+                               , "Check your Twilio config and try again." ]
+          logError "Exiting."
           exitFailure
 
 buildConfig :: Options -> ConfigFile -> C.Config
