@@ -198,7 +198,7 @@ main = do
       mainThreadId <- myThreadId
       installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
-      startChecks config
+      E.catch (startChecks config) errorHandler
       where
         sendMailHandler :: E.SomeException -> IO ()
         sendMailHandler _ = do
@@ -221,6 +221,15 @@ main = do
           sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
           sendSms "wwdc was terminated!" (C.twilio config)
           E.throwTo tid ExitSuccess
+          
+        errorHandler :: E.SomeException -> IO ()
+        errorHandler err = do
+          logError "An unrecoverable error occurred:"
+          logError $ T.pack $ show err
+          sendMail "wwdcc died!" (T.unlines errorBody) (C.email config)
+          sendSms "wwdc died! See the log for details." (C.twilio config)
+          logError "Exiting."
+          exitFailure
 
 buildConfig :: Options -> ConfigFile -> C.Config
 buildConfig options configFile = C.Config { C.daemon = daemon options
@@ -242,6 +251,18 @@ buildConfig options configFile = C.Config { C.daemon = daemon options
                       }
 
 -- Various message/help bodies.
+
+errorBody :: [T.Text]
+errorBody = [ "Hi!"
+            , ""
+            , "This is the wwdcc service writing to tell you that I have encountered"
+            , "an unrecoverable error. As a result, I am no longer monitoring the"
+            , "WWDC homepage."
+            , ""
+            , "See the logfile for details."
+            , ""
+            , "Sorry,"
+            , "The wwdcc service" ]
 
 terminationBody :: [T.Text]
 terminationBody = [
