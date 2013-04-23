@@ -194,7 +194,23 @@ main = do
       mainThreadId <- myThreadId
       installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
-      E.catch (startChecks config) errorHandler
+      
+      -- Catch all unexpected errors so that we can log them and
+      -- notify the user. However, the signal handlers installed
+      -- above, and the "natural" end of the program, will exit the
+      -- program with ExitSuccess, in which case we just want to pass
+      -- it on.
+      --
+      -- I tried to figure out some way to handle this via pattern
+      -- matching in a single handler, but I couldn't. So instead, I
+      -- use the catches function to break the handlers into two
+      -- cases: one for ExitCode types, and one for everything else.
+      -- Then, the ExitCode handler uses pattern matching on
+      -- ExitSuccess to handle it specially, and the remaining
+      -- handlers log the exception and notify the user.
+      -- 
+      E.catches (startChecks config) [ E.Handler (\ (ex :: ExitCode) -> handleExitCode ex)
+                                     , E.Handler (\ (ex :: E.SomeException) -> errorHandler ex) ]
       where
         sendMailHandler :: E.SomeException -> IO ()
         sendMailHandler _ = do
@@ -213,11 +229,20 @@ main = do
           
         terminationHandler :: ThreadId -> C.Config -> IO ()
         terminationHandler tid config = do
-          logWarning "Terminated."
           sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
           sendSms "wwdc was terminated!" (C.twilio config)
+          logWarning "Terminated."
           E.throwTo tid ExitSuccess
           
+        handleExitCode :: ExitCode -> IO ()
+        handleExitCode ExitSuccess = exitSuccess -- just pass it on.
+        handleExitCode err = do
+          logError "The program is unexpectedly exiting."
+          sendMail "wwdcc exited unexpectedly!" (T.unlines earlyExitBody) (C.email config)
+          sendSms "wwdc exited unexpectedly! See the log for details." (C.twilio config)
+          logError "Exiting."
+          E.throw err
+        
         errorHandler :: E.SomeException -> IO ()
         errorHandler err = do
           logError "An unrecoverable error occurred:"
@@ -258,6 +283,18 @@ errorBody = [ "Hi!"
             , ""
             , "Sorry,"
             , "The wwdcc service" ]
+
+earlyExitBody :: [T.Text]
+earlyExitBody = [ "Hi!"
+                , ""
+                , "This is the wwdcc service writing to tell you that the program has"
+                , "unexpectedly exited. As a result, I am no longer monitoring the"
+                , "WWDC homepage."
+                , ""
+                , "See the logfile for details."
+                , ""
+                , "Sorry,"
+                , "The wwdcc service" ]
 
 terminationBody :: [T.Text]
 terminationBody = [ "Hi!"
