@@ -164,9 +164,6 @@ configFileHelp = [ "Here's an example config file:"
                  , "  accountSid = \"Your Twilio Account SID here\""
                  , "  authToken = \"The corresponding Twilio auth token here\"" 
                  , "}"
-                 , ""
-                 , "If you don't have a Twilio account, you don't need a config"
-                 , "file; simply remove your existing one."
                  ]
                  
 main :: IO ()
@@ -177,9 +174,22 @@ main = do
                                logError $ T.unlines [ "Your config file is broken. The parser error was:"
                                                     , T.pack $ show err]
                                logError $ T.unlines configFileHelp
+                               logError $ T.unlines [ "If you don't have a Twilio account, you don't need a config"
+                                                    , "file; simply remove your existing one." ]
                                exitFailure)
+
+  when (isJust (sms cmdLineOptions) && isNothing (twilioAcct dotFileConfig)) $ do
+    logError $ T.unlines [ "Missing Twilio account configuration. Can't send SMS notifications"
+                         , "without your Twilio account details." ]
+    logError $ T.unlines configFileHelp
+    logError $ T.unwords [ "Complete that config, put it in your" 
+                           , T.pack $ (config cmdLineOptions) 
+                           , "file, and try again." ]
+    exitFailure
+
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
+
   let config = buildConfig cmdLineOptions dotFileConfig
     in do
       when (Nothing == (C.email config) && Nothing == (C.twilio config)) $ logWarning "Warning: no notifications will be sent! Running anyway...."
