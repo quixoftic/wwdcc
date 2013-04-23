@@ -108,12 +108,12 @@ parser = Options
          <$> switch (long "verbose"
                      <> short 'v'
                      <> help "Verbose logging")
-         <*> option (long "config"
-                     <> short 'c'
-                     <> metavar "PATH"
-                     <> value configFile
-                     <> showDefault
-                     <> help "Path to config file")
+         <*> strOption (long "config"
+                        <> short 'c'
+                        <> metavar "PATH"
+                        <> value configFile
+                        <> showDefault
+                        <> help "Path to config file")
          <*> switch (long "syslog"
                      <> short 's'
                      <> help "Log to syslog (default: log to stderr)")
