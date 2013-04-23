@@ -34,23 +34,8 @@ import Logging
 
 data SiteStatus = Unmodified | Modified | NotResponding deriving Show
 
-welcomeBody :: [T.Text]
-welcomeBody = [
-  "Hi!",
-  "",
-  "This is the wwdcc service writing to tell you that I am now monitoring",
-  "the WWDC homepage for updates and downtime. I will notify you as soon",
-  "as I detect a change.",
-  "",
-  "Humbly yours,",
-  "The wwdcc service"
-  ]
-
 startChecks :: Config -> IO ()
-startChecks config = do
-  sendMail "wwdcc is now activated!" (T.unlines welcomeBody) (email config)
-  sendSms "wwdcc is now activated!" (twilio config)
-  getStatus Unmodified Unmodified config
+startChecks config = getStatus Unmodified Unmodified config
 
 getStatus :: SiteStatus -> SiteStatus -> Config -> IO ()
 getStatus oldestStatus oldStatus config = do

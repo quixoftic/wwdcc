@@ -166,6 +166,18 @@ configFileHelp = [ "Here's an example config file:"
                  , "}"
                  ]
                  
+welcomeBody :: [T.Text]
+welcomeBody = [
+  "Hi!",
+  "",
+  "This is the wwdcc service writing to tell you that I am now monitoring",
+  "the WWDC homepage for updates and downtime. I will notify you as soon",
+  "as I detect a change.",
+  "",
+  "Humbly yours,",
+  "The wwdcc service"
+  ]
+
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
@@ -202,10 +214,20 @@ main = do
                   <> progDesc description
                   <> header "wwdcc - a WWDC checker" )
     startUp config = do
+      E.catch (sendMail "wwdcc is now activated!" (T.unlines welcomeBody) (C.email config)) sendMailHandler
+      sendSms "wwdcc is now activated!" (C.twilio config)
       mainThreadId <- myThreadId
       installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
       startChecks config
+      where
+        sendMailHandler :: E.ErrorCall -> IO ()
+        sendMailHandler _ = do
+          logError $ T.unlines [ "wwdcc uses sendmail for email notifications, but your sendmail config appears"
+                               , "to be broken." 
+                               , ""
+                               , "Exiting."]
+          exitFailure
 
 buildConfig :: Options -> ConfigFile -> C.Config
 buildConfig options configFile = C.Config { C.daemon = daemon options
