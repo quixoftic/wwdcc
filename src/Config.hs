@@ -10,10 +10,17 @@
 
 module Config ( Config(..)
               , Email(..)
+              , Twilio(..)
               ) where
 
 import qualified Data.Text as T
 import Data.Maybe
+
+data Twilio = Twilio { accountSid :: !T.Text
+                     , authToken :: !T.Text
+                     , fromPhone :: !T.Text
+                     , toPhone :: !T.Text
+                     } deriving (Show, Eq)
 
 data Email = Email { fromEmail :: !T.Text
                    , toEmail:: !T.Text
@@ -24,5 +31,6 @@ data Config = Config { daemon :: !Bool
                      , period :: !Int
                      , notifications :: !Int
                      , wait :: !Int
+                     , twilio :: Maybe Twilio
                      , email :: Maybe Email
                      } deriving (Show, Eq)

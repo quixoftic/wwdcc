@@ -30,5 +30,6 @@ Executable wwdcc
                                 tagsoup,
                                 optparse-applicative,
                                 mime-mail,
-                                MissingH
+                                MissingH,
+                                configurator
 

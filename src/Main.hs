@@ -14,6 +14,7 @@ module Main where
 import Control.Applicative
 import Data.Maybe
 import Control.Monad (when)
+import System.IO (FilePath)
 import System.Environment (getProgName)
 import System.Exit
 import System.Posix.Signals
@@ -21,25 +22,63 @@ import Control.Concurrent
 import qualified Data.Text as T
 import qualified Control.Exception as E
 import Data.List.Utils
+import qualified Data.Configurator as DC
+import qualified Data.Configurator.Types as DC
 import System.Posix.Daemonize
 import Options.Applicative
 import Wwdcc
 import Logging
 import qualified Config as C
 
+configFile = "$(HOME)/.wwdcc" :: FilePath
 wwdcUrl = "https://developer.apple.com/wwdc/"
 description = "Send a notification(s) when WWDC site changes or stops responding."
 defaultPeriod = 30
 defaultNotifications = 3
 defaultWait = 30
 
+-- Config file datatypes and loaders.
+--
+
+-- Because it contains secrets, Twilio authentication configuration
+-- can only be read from a config file.
+--
+data TwilioAcct = TwilioAcct { accountSid :: !T.Text
+                             , authToken :: !T.Text
+                             }
+
+data ConfigFile = ConfigFile { twilioAcct :: Maybe TwilioAcct }
+
+loadConfigFile :: FilePath -> IO (ConfigFile)
+loadConfigFile path = do
+  dotFileConfig <- DC.load [ DC.Optional path ]
+  accountSid <- DC.lookup dotFileConfig "twilio.accountSid" :: IO (Maybe T.Text)
+  authToken <- DC.lookup dotFileConfig "twilio.authToken" :: IO (Maybe T.Text)
+  return ConfigFile { twilioAcct = makeTwilioAcct accountSid authToken }
+  where
+    makeTwilioAcct :: Maybe T.Text -> Maybe T.Text -> Maybe TwilioAcct
+    makeTwilioAcct Nothing _ = Nothing
+    makeTwilioAcct _ Nothing = Nothing
+    makeTwilioAcct (Just sid) (Just token) = Just TwilioAcct { accountSid = sid
+                                                             , authToken = token
+                                                             }
+  
+-- Command-line datatypes and parsers.
+--
+
+data SMSOption = SMSOption { fromPhone :: !T.Text
+                           , toPhone :: !T.Text
+                           }
+                 
 data Options = Options { verbose :: !Bool
+                       , config :: !FilePath
                        , syslog :: !Bool
                        , daemon :: !Bool
                        , url :: !String
                        , period :: !Int
                        , notifications :: !Int
                        , wait :: !Int
+                       , sms :: Maybe SMSOption
                        , email :: Maybe C.Email
                        }
   
@@ -49,7 +88,14 @@ parsePositiveInt str = parsePositiveInt' $ (reads str :: [(Int, String)])
     parsePositiveInt' :: [(Int, String)] -> Either ParseError Int
     parsePositiveInt' [(x, "")] = if (x > 0) then Right x else Left ShowHelpText
     parsePositiveInt' _ = Left ShowHelpText
-  
+
+parseSms :: String -> Either ParseError SMSOption
+parseSms str = parseSms' $ split "," str
+  where
+    parseSms' :: [String] -> Either ParseError SMSOption
+    parseSms' (x:y:[]) = Right $ SMSOption (T.pack x) (T.pack y)
+    parseSms' _ = Left $ ErrorMsg "SMS format is from_number,to_number"
+               
 parseEmail :: String -> Either ParseError C.Email
 parseEmail str = parseEmail' $ split "," str
   where
@@ -62,6 +108,12 @@ parser = Options
          <$> switch (long "verbose"
                      <> short 'v'
                      <> help "Verbose logging")
+         <*> option (long "config"
+                     <> short 'c'
+                     <> metavar "PATH"
+                     <> value configFile
+                     <> showDefault
+                     <> help "Path to config file")
          <*> switch (long "syslog"
                      <> short 's'
                      <> help "Log to syslog (default: log to stderr)")
@@ -94,6 +146,11 @@ parser = Options
                          <> showDefault
                          <> reader parsePositiveInt
                          <> help "Time between notifications, in seconds")
+         <*> optional (nullOption (long "sms"
+                                   <> short 's'
+                                   <> metavar "FROM_NUMBER,TO_NUMBER"
+                                   <> reader parseSms
+                                   <> help "Send SMS notifications from/to phone number, comma-delimited (default: don't send SMS notifications)."))
          <*> optional (nullOption (long "email"
                                    <> short 'e'
                                    <> metavar "FROM_EMAIL,TO_EMAIL"
@@ -103,11 +160,12 @@ parser = Options
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
+  dotFileConfig <- loadConfigFile (config cmdLineOptions)
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
-  let config = buildConfig cmdLineOptions
+  let config = buildConfig cmdLineOptions dotFileConfig
     in do
-      when (Nothing == (C.email config)) $ logWarning "Warning: no email notifications will be sent! Running anyway...."
+      when (Nothing == (C.email config) && Nothing == (C.twilio config)) $ logWarning "Warning: no notifications will be sent! Running anyway...."
       if (daemon cmdLineOptions)
         then daemonize $ startUp config
         else startUp config
@@ -122,13 +180,24 @@ main = do
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
       startChecks config
 
-buildConfig :: Options -> C.Config
-buildConfig options = C.Config { C.daemon = daemon options
-                               , C.url = T.pack $ url options
-                               , C.period = period options
-                               , C.notifications = notifications options
-                               , C.wait = wait options
-                               , C.email = email options }
+buildConfig :: Options -> ConfigFile -> C.Config
+buildConfig options configFile = C.Config { C.daemon = daemon options
+                                          , C.url = T.pack $ url options
+                                          , C.period = period options
+                                          , C.notifications = notifications options
+                                          , C.wait = wait options
+                                          , C.twilio = twilioConfig options configFile
+                                          , C.email = email options }
+  where
+    twilioConfig :: Options -> ConfigFile -> Maybe C.Twilio
+    twilioConfig opts cfg = do
+      smsConfig <- sms opts
+      acctConfig <- twilioAcct cfg
+      return C.Twilio { C.accountSid = accountSid acctConfig
+                      , C.authToken = authToken acctConfig
+                      , C.fromPhone = fromPhone smsConfig
+                      , C.toPhone = toPhone smsConfig
+                      }
 
 terminationBody :: [T.Text]
 terminationBody = [
