@@ -10,6 +10,7 @@
 
 
 module Logging ( verboseLogging
+               , defaultLogging
                , logToSyslog
                , defaultName
                , logDebug
@@ -30,6 +31,9 @@ defaultName = "wwdcc"
 
 verboseLogging :: IO ()
 verboseLogging = updateGlobalLogger defaultName (setLevel INFO)
+
+defaultLogging :: IO ()
+defaultLogging = updateGlobalLogger defaultName (setLevel WARNING)
 
 logToSyslog :: String -> IO ()
 logToSyslog progName = do

@@ -174,7 +174,7 @@ main = do
                            , "file, and try again." ]
     exitFailure
 
-  when (verbose cmdLineOptions) verboseLogging
+  if (verbose cmdLineOptions) then verboseLogging else defaultLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
 
   let config = buildConfig cmdLineOptions dotFileConfig
