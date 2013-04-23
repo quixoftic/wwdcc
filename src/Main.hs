@@ -157,27 +157,6 @@ parser = Options
                                    <> reader parseEmail
                                    <> help "Send email notifications from/to address, comma-delimited (default: don't send email notifications)."))
 
-configFileHelp :: [T.Text]
-configFileHelp = [ "Here's an example config file:"
-                 , ""
-                 , "twilio {"
-                 , "  accountSid = \"Your Twilio Account SID here\""
-                 , "  authToken = \"The corresponding Twilio auth token here\"" 
-                 , "}"
-                 ]
-                 
-welcomeBody :: [T.Text]
-welcomeBody = [
-  "Hi!",
-  "",
-  "This is the wwdcc service writing to tell you that I am now monitoring",
-  "the WWDC homepage for updates and downtime. I will notify you as soon",
-  "as I detect a change.",
-  "",
-  "Humbly yours,",
-  "The wwdcc service"
-  ]
-
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
@@ -235,6 +214,13 @@ main = do
                                , "Check your Twilio config and try again." ]
           logError "Exiting."
           exitFailure
+          
+        terminationHandler :: ThreadId -> C.Config -> IO ()
+        terminationHandler tid config = do
+          logWarning "Terminated."
+          sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
+          sendSms "wwdc was terminated!" (C.twilio config)
+          E.throwTo tid ExitSuccess
 
 buildConfig :: Options -> ConfigFile -> C.Config
 buildConfig options configFile = C.Config { C.daemon = daemon options
@@ -255,6 +241,8 @@ buildConfig options configFile = C.Config { C.daemon = daemon options
                       , C.toPhone = toPhone smsConfig
                       }
 
+-- Various message/help bodies.
+
 terminationBody :: [T.Text]
 terminationBody = [
   "Hi!",
@@ -266,9 +254,23 @@ terminationBody = [
   "The wwdcc service"
   ]
   
-terminationHandler :: ThreadId -> C.Config -> IO ()
-terminationHandler tid config = do
-  logWarning "Terminated."
-  sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
-  sendSms "wwdc was terminated!" (C.twilio config)
-  E.throwTo tid ExitSuccess
+configFileHelp :: [T.Text]
+configFileHelp = [ "Here's an example config file:"
+                 , ""
+                 , "twilio {"
+                 , "  accountSid = \"Your Twilio Account SID here\""
+                 , "  authToken = \"The corresponding Twilio auth token here\"" 
+                 , "}"
+                 ]
+                 
+welcomeBody :: [T.Text]
+welcomeBody = [
+  "Hi!",
+  "",
+  "This is the wwdcc service writing to tell you that I am now monitoring",
+  "the WWDC homepage for updates and downtime. I will notify you as soon",
+  "as I detect a change.",
+  "",
+  "Humbly yours,",
+  "The wwdcc service"
+  ]
