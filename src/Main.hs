@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 -- Module      : Main
 -- Copyright   : Copyright © 2013, Quixoftic, LLC <src@quixoftic.com>
 -- License     : BSD3 (see LICENSE file)
@@ -157,10 +157,27 @@ parser = Options
                                    <> reader parseEmail
                                    <> help "Send email notifications from/to address, comma-delimited (default: don't send email notifications)."))
 
+configFileHelp :: [T.Text]
+configFileHelp = [ "Here's an example config file:"
+                 , ""
+                 , "twilio {"
+                 , "  accountSid = \"Your Twilio Account SID here\""
+                 , "  authToken = \"The corresponding Twilio auth token here\"" 
+                 , "}"
+                 , ""
+                 , "If you don't have a Twilio account, you don't need a config"
+                 , "file; simply remove your existing one."
+                 ]
+                 
 main :: IO ()
 main = do
   cmdLineOptions <- execParser opts
-  dotFileConfig <- loadConfigFile (config cmdLineOptions)
+  dotFileConfig <- E.catch (loadConfigFile (config cmdLineOptions))
+                           (\(err :: DC.ConfigError) -> do
+                               logError $ T.unlines [ "Your config file is broken. The parser error was:"
+                                                    , T.pack $ show err]
+                               logError $ T.unlines configFileHelp
+                               exitFailure)
   when (verbose cmdLineOptions) verboseLogging
   when ((syslog cmdLineOptions) || (daemon cmdLineOptions)) $ getProgName >>= logToSyslog
   let config = buildConfig cmdLineOptions dotFileConfig
