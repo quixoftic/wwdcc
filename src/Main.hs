@@ -44,8 +44,7 @@ defaultWait = 30
 -- can only be read from a config file.
 --
 data TwilioAcct = TwilioAcct { accountSid :: !T.Text
-                             , authToken :: !T.Text
-                             }
+                             , authToken :: !T.Text }
 
 data ConfigFile = ConfigFile { twilioAcct :: Maybe TwilioAcct }
 
@@ -60,15 +59,13 @@ loadConfigFile path = do
     makeTwilioAcct Nothing _ = Nothing
     makeTwilioAcct _ Nothing = Nothing
     makeTwilioAcct (Just sid) (Just token) = Just TwilioAcct { accountSid = sid
-                                                             , authToken = token
-                                                             }
+                                                             , authToken = token }
   
 -- Command-line datatypes and parsers.
 --
 
 data SMSOption = SMSOption { fromPhone :: !T.Text
-                           , toPhone :: !T.Text
-                           }
+                           , toPhone :: !T.Text }
                  
 data Options = Options { verbose :: !Bool
                        , config :: !FilePath
@@ -79,8 +76,7 @@ data Options = Options { verbose :: !Bool
                        , notifications :: !Int
                        , wait :: !Int
                        , sms :: Maybe SMSOption
-                       , email :: Maybe C.Email
-                       }
+                       , email :: Maybe C.Email }
   
 parsePositiveInt :: String -> Either ParseError Int
 parsePositiveInt str = parsePositiveInt' $ (reads str :: [(Int, String)])
@@ -247,8 +243,7 @@ buildConfig options configFile = C.Config { C.daemon = daemon options
       return C.Twilio { C.accountSid = accountSid acctConfig
                       , C.authToken = authToken acctConfig
                       , C.fromPhone = fromPhone smsConfig
-                      , C.toPhone = toPhone smsConfig
-                      }
+                      , C.toPhone = toPhone smsConfig }
 
 -- Various message/help bodies.
 
@@ -265,15 +260,13 @@ errorBody = [ "Hi!"
             , "The wwdcc service" ]
 
 terminationBody :: [T.Text]
-terminationBody = [
-  "Hi!",
-  "",
-  "This is the wwdcc service writing to tell you that I have been",
-  "terminated. I am no longer monitoring the WWDC homepage.",
-  "",
-  "FYI,",
-  "The wwdcc service"
-  ]
+terminationBody = [ "Hi!"
+                  , ""
+                  , "This is the wwdcc service writing to tell you that I have been"
+                  , "terminated. I am no longer monitoring the WWDC homepage."
+                  , ""
+                  , "FYI,"
+                  , "The wwdcc service" ]
   
 configFileHelp :: [T.Text]
 configFileHelp = [ "Here's an example config file:"
@@ -281,17 +274,14 @@ configFileHelp = [ "Here's an example config file:"
                  , "twilio {"
                  , "  accountSid = \"Your Twilio Account SID here\""
                  , "  authToken = \"The corresponding Twilio auth token here\"" 
-                 , "}"
-                 ]
+                 , "}" ]
                  
 welcomeBody :: [T.Text]
-welcomeBody = [
-  "Hi!",
-  "",
-  "This is the wwdcc service writing to tell you that I am now monitoring",
-  "the WWDC homepage for updates and downtime. I will notify you as soon",
-  "as I detect a change.",
-  "",
-  "Humbly yours,",
-  "The wwdcc service"
-  ]
+welcomeBody = [ "Hi!"
+              , ""
+              , "This is the wwdcc service writing to tell you that I am now monitoring"
+              , "the WWDC homepage for updates and downtime. I will notify you as soon"
+              , "as I detect a change."
+              , ""
+              , "Humbly yours,"
+              , "The wwdcc service" ]
