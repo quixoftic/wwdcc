@@ -214,4 +214,5 @@ terminationHandler :: ThreadId -> C.Config -> IO ()
 terminationHandler tid config = do
   logWarning "Terminated."
   sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
+  sendSms "wwdc was terminated!" (C.twilio config)
   E.throwTo tid ExitSuccess
