@@ -194,6 +194,7 @@ main = do
       mainThreadId <- myThreadId
       installHandler keyboardSignal (Catch (terminationHandler mainThreadId config)) Nothing
       installHandler softwareTermination (Catch (terminationHandler mainThreadId config)) Nothing
+      installHandler userDefinedSignal1 (Catch (pingHandler config)) Nothing
       
       -- Catch all unexpected errors so that we can log them and
       -- notify the user. However, the signal handlers installed
@@ -226,6 +227,12 @@ main = do
                                , "Check your Twilio config and try again." ]
           logError "Exiting."
           exitFailure
+
+        pingHandler :: C.Config -> IO ()
+        pingHandler config = do
+          logInfo "User requested an update"
+          sendMail "wwdc is still alive" (T.unlines pingBody) (C.email config)
+          sendSms "wwdc is still alive" (C.twilio config)
           
         terminationHandler :: ThreadId -> C.Config -> IO ()
         terminationHandler tid config = do
@@ -271,6 +278,15 @@ buildConfig options configFile = C.Config { C.daemon = daemon options
                       , C.toPhone = toPhone smsConfig }
 
 -- Various message/help bodies.
+
+pingBody :: [T.Text]
+pingBody = [ "Hi!"
+           , ""
+           , "This is the wwdcc service writing to tell you that I am still"
+           , "monitoring the WWDC homepage. All is well."
+           , ""
+           , "FYI,"
+           , "The wwdcc service" ]
 
 errorBody :: [T.Text]
 errorBody = [ "Hi!"
