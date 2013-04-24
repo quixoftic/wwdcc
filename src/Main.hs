@@ -231,13 +231,13 @@ main = do
         pingHandler :: C.Config -> IO ()
         pingHandler config = do
           logInfo "User requested an update"
-          sendMail "wwdc is still alive" (T.unlines pingBody) (C.email config)
-          sendSms "wwdc is still alive" (C.twilio config)
+          sendMail "wwdcc is still alive" (T.unlines pingBody) (C.email config)
+          sendSms "wwdcc is still alive" (C.twilio config)
           
         terminationHandler :: ThreadId -> C.Config -> IO ()
         terminationHandler tid config = do
           sendMail "wwdcc was terminated!" (T.unlines terminationBody) (C.email config)
-          sendSms "wwdc was terminated!" (C.twilio config)
+          sendSms "wwdcc was terminated!" (C.twilio config)
           logWarning "Terminated."
           E.throwTo tid ExitSuccess
           
@@ -246,7 +246,7 @@ main = do
         handleExitCode err = do
           logError "The program is unexpectedly exiting."
           sendMail "wwdcc exited unexpectedly!" (T.unlines earlyExitBody) (C.email config)
-          sendSms "wwdc exited unexpectedly! See the log for details." (C.twilio config)
+          sendSms "wwdcc exited unexpectedly! See the log for details." (C.twilio config)
           logError "Exiting."
           E.throw err
         
@@ -255,7 +255,7 @@ main = do
           logError "An unrecoverable error occurred:"
           logError $ T.pack $ show err
           sendMail "wwdcc died!" (T.unlines errorBody) (C.email config)
-          sendSms "wwdc died! See the log for details." (C.twilio config)
+          sendSms "wwdcc died! See the log for details." (C.twilio config)
           logError "Exiting."
           exitFailure
 
